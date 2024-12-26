@@ -47,9 +47,11 @@
 #include "libunicode.h"
 #include "libbf.h"
 
+#include <stdfil.h>
+
 #define OPTIMIZE         1
 #define SHORT_OPCODES    1
-#if defined(EMSCRIPTEN)
+#if defined(EMSCRIPTEN) || defined(__PIZLONATOR_WAS_HERE__)
 #define DIRECT_DISPATCH  0
 #else
 #define DIRECT_DISPATCH  1
@@ -845,8 +847,8 @@ typedef struct JSProperty {
         struct {            /* JS_PROP_AUTOINIT */
             /* in order to use only 2 pointers, we compress the realm
                and the init function pointer */
-            uintptr_t realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
-                                       in the 2 low bits */
+            void* realm_and_id; /* realm and init_id (JS_AUTOINIT_ID_x)
+                                   in the 2 low bits */
             void *opaque;
         } init;
     } u;
@@ -5176,12 +5178,12 @@ JSValue JS_NewCFunctionData(JSContext *ctx, JSCFunctionData *func,
 
 static JSContext *js_autoinit_get_realm(JSProperty *pr)
 {
-    return (JSContext *)(pr->u.init.realm_and_id & ~3);
+    return (JSContext *)((uintptr_t)pr->u.init.realm_and_id & ~3);
 }
 
 static JSAutoInitIDEnum js_autoinit_get_id(JSProperty *pr)
 {
-    return pr->u.init.realm_and_id & 3;
+    return (uintptr_t)pr->u.init.realm_and_id & 3;
 }
 
 static void js_autoinit_free(JSRuntime *rt, JSProperty *pr)
@@ -9353,10 +9355,10 @@ static int JS_DefineAutoInitProperty(JSContext *ctx, JSValueConst this_obj,
     pr = add_property(ctx, p, prop, (flags & JS_PROP_C_W_E) | JS_PROP_AUTOINIT);
     if (unlikely(!pr))
         return -1;
-    pr->u.init.realm_and_id = (uintptr_t)JS_DupContext(ctx);
-    assert((pr->u.init.realm_and_id & 3) == 0);
+    pr->u.init.realm_and_id = JS_DupContext(ctx);
+    assert(((uintptr_t)pr->u.init.realm_and_id & 3) == 0);
     assert(id <= 3);
-    pr->u.init.realm_and_id |= id;
+    pr->u.init.realm_and_id = (void*)((uintptr_t)pr->u.init.realm_and_id | id);
     pr->u.init.opaque = opaque;
     return TRUE;
 }

@@ -303,7 +303,16 @@ int unicode_from_utf8(const uint8_t *p, int max_len, const uint8_t **pp)
     return c;
 }
 
-#if 0
+#ifdef __PIZLONATOR_WAS_HERE__
+
+void rqsort(void *base, size_t nmemb, size_t size,
+            int (*cmp)(const void *, const void *, void *),
+            void *arg)
+{
+    qsort_r(base, nmemb, size, cmp, arg);
+}
+
+#elif 0
 
 #if defined(EMSCRIPTEN) || defined(__ANDROID__)
 
